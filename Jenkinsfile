@@ -1,6 +1,11 @@
 pipeline {
     agent any
     stages {
+        stage('Checkout SCM') {
+            steps {
+                git 'https://github.com/Celeste45/simple-node-js-react-npm-app.git'
+            }
+        }
         stage('Build') {
             steps {
                 sh 'npm install'
@@ -20,14 +25,17 @@ pipeline {
         }
         stage('OWASP Dependency-Check Vulnerabilities') {
             steps {
-                dependencyCheck additionalArguments: ''' 
+                dependencyCheck additionalArguments: '''
                             -o './'
                             -s './'
-                            -f 'ALL' 
+                            -f 'ALL'
                             --prettyPrint''', odcInstallation: 'OWASP Dependency-Check Vulnerabilities'
-                
-                dependencyCheckPublisher pattern: 'dependency-check-report.xml'
             }
+        }
+    }
+    post {
+        success {
+            dependencyCheckPublisher pattern: 'dependency-check-report.xml'
         }
     }
 }
