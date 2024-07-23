@@ -39,31 +39,65 @@
 pipeline {
   agent any
   stages {
-    stage('Unit Test') {
+    stage('Checkout') {
       steps {
-        sh 'mvn clean test'
+        git branch: 'master', url: 'https://github.com/ScaleSec/vulnado.git'
       }
     }
-    stage('Deploy Standalone') {
+    stage('Build') {
       steps {
-        sh 'mvn deploy -P standalone'
+        sh '/var/jenkins_home/apache-maven-3.6.3/bin/mvn --batch-mode -V -U -e clean
+        verify - Dsurefire.useFile = false - Dmaven.test.failure.ignore '
       }
     }
-    stage('Deploy AnyPoint') {
-      environment {
-        ANYPOINT_CREDENTIALS = credentials('anypoint.credentials')
-      }
+    stage('Analysis') {
       steps {
-        sh 'mvn deploy -P arm -Darm.target.name=local-4.0.0-ee -Danypoint.username=${ANYPOINT_CREDENTIALS_USR}  -Danypoint.password=${ANYPOINT_CREDENTIALS_PSW}'
-      }
-    }
-    stage('Deploy CloudHub') {
-      environment {
-        ANYPOINT_CREDENTIALS = credentials('anypoint.credentials')
-      }
-      steps {
-        sh 'mvn deploy -P cloudhub -Dmule.version=4.0.0 -Danypoint.username=${ANYPOINT_CREDENTIALS_USR} -Danypoint.password=${ANYPOINT_CREDENTIALS_PSW}'
+        sh '/var/jenkins_home/apache-maven-3.6.3/bin/mvn --batch-mode -V -U -e
+        checkstyle: checkstyle pmd: pmd pmd: cpd findbugs: findbugs '
       }
     }
   }
+  post {
+    always {
+      junit testResults: '**/target/surefire-reports/TEST-*.xml'
+      recordIssues enabledForFailure: true, tools: [mavenConsole(), java(), javaDoc()]
+      recordIssues enabledForFailure: true, tool: checkStyle()
+      recordIssues enabledForFailure: true, tool: spotBugs(pattern:
+        '**/target/findbugsXml.xml')
+      recordIssues enabledForFailure: true, tool: cpd(pattern: '**/target/cpd.xml')
+      recordIssues enabledForFailure: true, tool: pmdParser(pattern: '**/target/pmd.xml')
+    }
+  }
 }
+
+// pipeline {
+//   agent any
+//   stages {
+//     stage('Unit Test') {
+//       steps {
+//         sh 'mvn clean test'
+//       }
+//     }
+//     stage('Deploy Standalone') {
+//       steps {
+//         sh 'mvn deploy -P standalone'
+//       }
+//     }
+//     stage('Deploy AnyPoint') {
+//       environment {
+//         ANYPOINT_CREDENTIALS = credentials('anypoint.credentials')
+//       }
+//       steps {
+//         sh 'mvn deploy -P arm -Darm.target.name=local-4.0.0-ee -Danypoint.username=${ANYPOINT_CREDENTIALS_USR}  -Danypoint.password=${ANYPOINT_CREDENTIALS_PSW}'
+//       }
+//     }
+//     stage('Deploy CloudHub') {
+//       environment {
+//         ANYPOINT_CREDENTIALS = credentials('anypoint.credentials')
+//       }
+//       steps {
+//         sh 'mvn deploy -P cloudhub -Dmule.version=4.0.0 -Danypoint.username=${ANYPOINT_CREDENTIALS_USR} -Danypoint.password=${ANYPOINT_CREDENTIALS_PSW}'
+//       }
+//     }
+//   }
+// }
