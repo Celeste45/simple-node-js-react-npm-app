@@ -41,7 +41,7 @@ pipeline {
   stages {
     stage('Checkout') {
       steps {
-        git branch: 'master', url: 'https://github.com/ScaleSec/vulnado.git'
+        git branch: 'master', url: 'https://github.com/Celeste45/simple-node-js-react-npm-app.git'
       }
     }
     stage('Build') {
